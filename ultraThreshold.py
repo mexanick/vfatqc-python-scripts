@@ -195,7 +195,7 @@ try:
     #    pass
 
     # Place VFATs back in sleep mode
-    #writeAllVFATs(ohboard, options.gtx, "ContReg0",    0x36, mask)
+    vfatBoard.setRunModeAll(mask, False, options.debug)
 
 except Exception as e:
     myT.AutoSave("SaveSelf")
