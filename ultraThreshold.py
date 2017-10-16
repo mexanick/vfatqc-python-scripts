@@ -44,7 +44,7 @@ myF = r.TFile(filename,'recreate')
 myT = r.TTree('thrTree','Tree Holding CMS GEM VT1 Data')
 
 Nev = array( 'i', [ 0 ] )
-Nev[0] = options.nevts
+Nev[0] = -1
 myT.Branch( 'Nev', Nev, 'Nev/I' )
 vth = array( 'i', [ 0 ] )
 myT.Branch( 'vth', vth, 'vth/I' )
