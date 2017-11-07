@@ -87,14 +87,14 @@ try:
 
     if vfatBoard.parentOH.parentAMC.fwVersion < 3:
         print "getting trigger source"
-        trgSrc = vfatBoard.parentOH.parentAMC.readRegister("GEM_AMC.OH.OH%d.CONTROL.TRIGGER.SOURCE"%(options.gtx))
+        trgSrc = vfatBoard.parentOH.getTriggerSource()
             
     scanReg = "THR_ARM_DAC"
     if options.perchannel: 
         # Set Trigger Source for v2b electronics
         if vfatBoard.parentOH.parentAMC.fwVersion < 3:
             print "setting trigger source"
-            vfatBoard.parentOH.parentAMC.writeRegister("GEM_AMC.OH.OH%d.CONTROL.TRIGGER.SOURCE"%(options.gtx),1)
+            vfatBoard.parentOH.setTriggerSource(1)
        
        # Configure TTC
         print "attempting to configure TTC"
@@ -157,7 +157,7 @@ try:
             pass
 
         if vfatBoard.parentOH.parentAMC.fwVersion < 3:
-            vfatBoard.parentOH.parentAMC.writeRegister("GEM_AMC.OH.OH%d.CONTROL.TRIGGER.SOURCE"%(options.gtx),trgSrc)
+            vfatBoard.parentOH.setTriggerSource(trgSrc)
         vfatBoard.parentOH.parentAMC.toggleTTC(options.gtx, False)
         pass
     else:
@@ -212,8 +212,9 @@ try:
         myT.AutoSave("SaveSelf")
 
         if options.trkdata:
-            setTriggerSource(ohboard,options.gtx,trgSrc)
-            stopLocalT1(ohboard, options.gtx)
+            if vfatBoard.parentOH.parentAMC.fwVersion < 3:
+                vfatBoard.parentOH.setTriggerSource(trgSrc)
+            vfatBoard.parentOH.parentAMC.toggleTTC(options.gtx, False)
             pass
         pass
 
