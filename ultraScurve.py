@@ -215,7 +215,7 @@ try:
         myT.AutoSave("SaveSelf")
         sys.stdout.flush()
         pass
-    vfatBoard.parentOH.parentAMC.toggleTTC(options.gtx, False)
+    vfatBoard.parentOH.parentAMC.toggleTTCGen(options.gtx, False)
     vfatBoard.setRunModeAll(mask, False, options.debug)
 except Exception as e:
     myT.AutoSave("SaveSelf")
