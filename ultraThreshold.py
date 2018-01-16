@@ -152,8 +152,7 @@ try:
         if 0 == vfatBoard.parentOH.parentAMC.configureTTC(pulseDelay=0,L1Ainterval=250,ohN=options.gtx,enable=True):
             print "TTC configured successfully"
         else:
-            print "TTC configuration failed"
-            sys.exit(os.EX_CONFIG)
+            raise Exception('RPC response was non-zero, TTC configuration failed')
     
         scanDataSizeVFAT = (options.scanmax-options.scanmin+1)/options.stepSize
         scanDataSizeNet = scanDataSizeVFAT * 24
@@ -172,8 +171,7 @@ try:
                                                                 stepSize=options.stepSize, mask=options.vfatmask)
 
             if rpcResp != 0:
-                print("threshold scan for channel %i failed"%chan)
-                sys.exit(os.EX_SOFTWARE)
+                raise Exception('RPC response was non-zero, threshold scan for channel %i failed'%chan)
             
             sys.stdout.flush()
             for vfat in range(0,24):
@@ -230,8 +228,7 @@ try:
             if 0 == vfatBoard.parentOH.parentAMC.configureTTC(pulseDelay=0,L1Ainterval=250,ohN=options.gtx,enable=True):
                 print "TTC configured successfully"
             else:
-                print "TTC configuration failed"
-                sys.exit(os.EX_CONFIG)
+                raise Exception('RPC response was non-zero, TTC configuration failed')
         else:
             scanReg = "VThreshold1"
             pass
@@ -246,8 +243,7 @@ try:
                                                             stepSize=options.stepSize, mask=options.vfatmask)
 
         if rpcResp != 0:
-            print("threshold scan failed")
-            sys.exit(os.EX_SOFTWARE)
+            raise Exception('RPC response was non-zero, threshold scan failed')
 
         sys.stdout.flush()
         for vfat in range(0,24):
