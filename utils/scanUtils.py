@@ -16,6 +16,7 @@ def dacScanAllLinks(args, calTree, vfatBoard):
 
     # Get the AMC
     amcBoard = vfatBoard.parentOH.parentAMC
+    nVFATs = vfatBoard.parentOH.nVFATs
 
     # Get DAC value
     dacSelect = args.dacSelect
@@ -34,9 +35,9 @@ def dacScanAllLinks(args, calTree, vfatBoard):
     for ohN in range(0,amcBoard.nOHs):
         # Skip masked OH's
         if( not ((args.ohMask >> ohN) & 0x1)):
-            calSelPolVals[ohN] = [ 0 for vfat in range(0,24) ]
-            irefVals[ohN] = [ 0 for vfat in range(0,24) ]
-            vfatIDvals[ohN] = [ 0 for vfat in range(0,24) ]
+            calSelPolVals[ohN] = [ 0 for vfat in range(0,nVFATs) ]
+            irefVals[ohN] = [ 0 for vfat in range(0,nVFATs) ]
+            vfatIDvals[ohN] = [ 0 for vfat in range(0,nVFATs) ]
         else:
             # update the OH in question
             vfatBoard.parentOH.link = ohN
@@ -51,7 +52,7 @@ def dacScanAllLinks(args, calTree, vfatBoard):
             vfatIDvals[ohN] = vfatBoard.getAllChipIDs(ohVFATMaskArray[ohN])
 
     # Perform DAC Scan
-    arraySize = amcBoard.nOHs * (dacMax-dacMin+1)*24/args.stepSize
+    arraySize = amcBoard.nOHs * (dacMax-dacMin+1)*nVFATs/args.stepSize
     scanData = (c_uint32 * arraySize)()
     print("Scanning DAC: {0} on all links".format(maxVfat3DACSize[dacSelect][1]))
     rpcResp = amcBoard.performDacScanMultiLink(scanData,dacSelect,args.stepSize,args.ohMask,args.extRefADC)
@@ -67,12 +68,12 @@ def dacScanAllLinks(args, calTree, vfatBoard):
         ohN  = ((dacWord >> 23) & 0xf)
         if( not ((args.ohMask >> ohN) & 0x1)):
             continue
-        
+
         # Get VFAT and skip if in ohVFATMaskArray[ohN]
         vfat = ((dacWord >> 18) & 0x1f)
         if ((ohVFATMaskArray[ohN] >> vfat) & 0x1):
             continue
-        
+
         calTree.fill(
                 calSelPol = calSelPolVals[ohN][vfat],
                 dacValX = (dacWord & 0xff),
@@ -115,19 +116,21 @@ def dacScanSingleLink(args, calTree, vfatBoard):
     # Get the AMC
     amcBoard = vfatBoard.parentOH.parentAMC
 
+    nVFATs = vfatBoard.parentOH.nVFATs
+
     # Get DAC value
     dacSelect = args.dacSelect
     dacMax = maxVfat3DACSize[dacSelect][0]
     dacMin = 0
     calTree.nameX[0] = maxVfat3DACSize[dacSelect][1]
     calTree.dacSelect[0] = dacSelect,
-    
+
     # Determine VFAT mask
     if args.vfatmask is None:
         args.vfatmask = vfatBoard.parentOH.getVFATMask()
         if args.debug:
             print("Automatically determined vfatmask to be: {0}".format(str(hex(args.vfatmask)).strip('L')))
-    
+
     # Get the cal sel polarity
     print("Getting Calibration Select Polarity of all VFATs")
     calSelPolVals = vfatBoard.readAllVFATs("CFG_CAL_SEL_POL",args.vfatmask)
@@ -139,9 +142,9 @@ def dacScanSingleLink(args, calTree, vfatBoard):
     # Determine Chip ID
     print("Getting CHIP IDs of all VFATs")
     vfatIDvals = vfatBoard.getAllChipIDs(args.vfatmask)
-    
+
     # Perform DAC Scan
-    arraySize = (dacMax-dacMin+1)*24/args.stepSize
+    arraySize = (dacMax-dacMin+1)*nVFATs/args.stepSize
     scanData = (c_uint32 * arraySize)()
     print("Scanning DAC {0} on Optohybrid {1}".format(maxVfat3DACSize[dacSelect][1], vfatBoard.parentOH.link))
     rpcResp = vfatBoard.parentOH.performDacScan(scanData, dacSelect, args.stepSize, args.vfatmask, args.extRefADC)
@@ -241,7 +244,7 @@ def launchSCurve(**kwargs):
     trimZCCPol = None
 
     # Get defaults from kwargs
-    from gempython.vfatqc.utils.qcutilities import getGeoInfoFromCardName 
+    from gempython.vfatqc.utils.qcutilities import getGeoInfoFromCardName
     if "calSF" in kwargs:
         calSF = kwargs["calSF"]
     if "cardName" in kwargs:
@@ -341,7 +344,7 @@ def launchSCurve(**kwargs):
         runCommand(cmd,log)
     else:
         runCommand(cmd)
-    
+
     return
 
 def makeScanDir(slot, ohN, scanType, startTime, shelf=1, chamber_config=None):
@@ -365,7 +368,7 @@ def makeScanDir(slot, ohN, scanType, startTime, shelf=1, chamber_config=None):
     else:
         dirPath = getDirByAnaType(scanType, "")
 
-    setupCmds = [] 
+    setupCmds = []
     setupCmds.append( ["mkdir","-p",dirPath+"/"+startTime] )
     setupCmds.append( ["chmod","g+rw",dirPath+"/"+startTime] )
     setupCmds.append( ["unlink",dirPath+"/current"] )
@@ -385,7 +388,7 @@ def sbitRateScanAllLinks(args, rateTree, vfatBoard, chan=128, scanReg="CFG_THR_A
     chan - VFAT channel to be scanned, if 128 is supplied the OR of all channels will be taken
     scanReg - Name of the VFAT register to scan against
     """
-    
+
     # Check to make sure required parameters exist, if not provide a default
     if hasattr(args, 'debug') is False: # debug
         args.debug = False
@@ -428,7 +431,7 @@ def sbitRateScanAllLinks(args, rateTree, vfatBoard, chan=128, scanReg="CFG_THR_A
         # Skip masked OH's
         if( not ((args.ohMask >> ohN) & 0x1)):
             continue
-        
+
         # update the OH in question
         vfatBoard.parentOH.link = ohN
 
@@ -437,11 +440,11 @@ def sbitRateScanAllLinks(args, rateTree, vfatBoard, chan=128, scanReg="CFG_THR_A
 
         #Place chips into run mode
         vfatBoard.setRunModeAll(ohVFATMaskArray[ohN], True, args.debug)
-    
+
         #Store original CFG_SEL_COMP_MODE
         vals  = vfatBoard.readAllVFATs("CFG_SEL_COMP_MODE", ohVFATMaskArray[ohN])
         selCompVals_orig[ohN] =  dict(map(lambda slotID: (slotID, vals[slotID]&0xff),range(0,24)))
-        
+
         #Store original CFG_FORCE_EN_ZCC
         vals = vfatBoard.readAllVFATs("CFG_FORCE_EN_ZCC", ohVFATMaskArray[ohN])
         forceEnZCCVals_orig[ohN] =  dict(map(lambda slotID: (slotID, vals[slotID]&0xff),range(0,24)))
@@ -462,16 +465,16 @@ def sbitRateScanAllLinks(args, rateTree, vfatBoard, chan=128, scanReg="CFG_THR_A
         pass
     print("scanning {0} for all VFATs in ohMask 0x{1:x} {2}".format(scanReg,args.ohMask,strChannels))
     rpcResp = amcBoard.performSBITRateScanMultiLink(
-            scanDataDAC, 
-            scanDataRate, 
-            scanDataRatePerVFAT, 
+            scanDataDAC,
+            scanDataRate,
+            scanDataRatePerVFAT,
             chan=chan,
-            dacMin=args.scanmin, 
-            dacMax=args.scanmax, 
-            dacStep=args.stepSize, 
-            ohMask=args.ohMask, 
+            dacMin=args.scanmin,
+            dacMax=args.scanmax,
+            dacStep=args.stepSize,
+            ohMask=args.ohMask,
             scanReg=scanReg)
-    
+
     if rpcResp != 0:
         raise Exception('RPC response was non-zero, sbit rate scan failed')
 
@@ -548,12 +551,12 @@ def sbitRateScanAllLinks(args, rateTree, vfatBoard, chan=128, scanReg="CFG_THR_A
             pass
         pass
 
-    # Take VFATs out of run mode 
+    # Take VFATs out of run mode
     for ohN in range(0,amcBoard.nOHs):
         # Skip masked OH's
         if( not ((args.ohMask >> ohN) & 0x1)):
             continue
-        
+
         # update the OH in question
         vfatBoard.parentOH.link = ohN
 
