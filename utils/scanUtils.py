@@ -214,6 +214,8 @@ def launchSCurve(**kwargs):
     trimARMPol - as trimARM but sets trim polarity
     trimZCC - as trimARM but for the ZCC comparator
     trimZCCPol - as trimZCC but sets trim polarity
+    gemType - gem generation (ge11, ge21 or me0)
+    detType - gem detector type
     """
 
     import datetime
@@ -242,6 +244,8 @@ def launchSCurve(**kwargs):
     trimARMPol = None
     trimZCC = None
     trimZCCPol = None
+    gemType="ge11"
+    detType="short"
 
     # Get defaults from kwargs
     from gempython.vfatqc.utils.qcutilities import getGeoInfoFromCardName
@@ -292,6 +296,10 @@ def launchSCurve(**kwargs):
         trimZCC = kwargs["trimZCC"]
     if "trimZCCPol" in kwargs:
         trimZCCPol = kwargs["trimZCCPol"]
+    if "gemType" in kwargs:
+        gemType = kwargs["gemType"]
+    if "detType" in kwargs:
+        detType = kwargs["detType"]
 
     # Check minimum arguments
     import os
@@ -318,6 +326,8 @@ def launchSCurve(**kwargs):
             "--shelf=%i"%(shelf),
             "--slot=%i"%(slot),
             "-g%d"%(link),
+            "--gemType=%s"%(gemType),
+            "--detType=%s"%(detType),
             "--chMin=%i"%(chMin),
             "--chMax=%i"%(chMax),
             "--latency=%i"%(latency),
