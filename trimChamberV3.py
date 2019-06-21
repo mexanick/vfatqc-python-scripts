@@ -9,16 +9,17 @@ if __name__ == '__main__':
     from ctypes import *
     from gempython.gemplotting.fitting.fitScanData import fitScanData
     from gempython.tools.vfat_user_functions_xhal import *
+    from gempython.tools.hw_constants import vfatsPerGemVariant
     from gempython.utils.nesteddict import nesteddict as ndict
     from gempython.utils.wrappers import runCommand, envCheck
     from gempython.gemplotting.mapping.chamberInfo import chamber_config
     from gempython.vfatqc.utils.qcoptions import parser
     from gempython.vfatqc.utils.scanUtils import launchSCurve
-    
+
     import datetime, subprocess, time
     import numpy as np
     import os
-   
+
     parser.add_option("--armDAC", type="int", dest = "armDAC", default = 100,
                       help="CFG_THR_ARM_DAC value to write to all VFATs", metavar="armDAC")
     parser.add_option("--calFileCAL", type="string", dest="calFileCAL", default=None,
@@ -46,11 +47,14 @@ if __name__ == '__main__':
                       help="comma separated list of trim values to use in trimming, a set of scurves will be taken at each point", metavar="trimPoints")
     parser.add_option("--vfatConfig", type="string", dest="vfatConfig", default=None,
                       help="Specify file containing VFAT settings from anaUltraThreshold", metavar="vfatConfig")
-    parser.add_option("--voltageStepPulse", action="store_true",dest="voltageStepPulse", 
-                      help="Calibration Module is set to use voltage step pulsing instead of default current pulse injection", 
+    parser.add_option("--voltageStepPulse", action="store_true",dest="voltageStepPulse",
+                      help="Calibration Module is set to use voltage step pulsing instead of default current pulse injection",
                       metavar="voltageStepPulse")
+    parser.add_option("--gemType",type=str,help="String that defines the GEM variant, available from the list: {0}".format(gemVariants.keys()),default="ge11")
+    parser.add_option("--detType",type=str,
+                        help="Detector type within gemType. If gemType is 'ge11' then this should be from list {0}; if gemType is 'ge21' then this should be from list {1}; and if type is 'me0' then this should be from the list {2}".format(gemVariants['ge11'],gemVariants['ge21'],gemVariants['me0']),default=None)
     (options, args) = parser.parse_args()
-   
+
     if options.calFileCAL is None:
         print("You must provide the calibration for the CFG_CAL_DAC register")
         print("Please relaunch with the --calFileCAL argument")
@@ -69,21 +73,21 @@ if __name__ == '__main__':
     # Make the ohKey
     ohKey = (options.shelf,options.slot,options.gtx)
 
-    # Get the calibration for the CFG_THR_ARM_DAC register    
+    # Get the calibration for the CFG_THR_ARM_DAC register
     if options.calFileARM is None:
         envCheck('DATA_PATH')
         dataPath = os.getenv('DATA_PATH')
         calFileBase = "{0}/{1}/calFile_CFG_THR_ARM_DAC_{1}".format(dataPath,chamber_config[ohKey])
         if os.path.isfile(calFileBase + ".root"):
             TFile_calInfo = r.TFile(calFileBase + ".root")
-            for vfat in range(0,24):
+            for vfat in range(0,vfatsPerGemVariant[options.gemType]):
                 for key in TFile_calInfo.GetDirectory("VFAT{0}".format(vfat)).GetListOfKeys():
                     if "func_ScurveMean_vs_CFG_THR_ARM_DAC_" in key.GetName() and "_vfatN{0}_".format(vfat) in key.GetName():
                         dict_func_scurveMeanVsThrDac[vfat] = TFile_calInfo.GetDirectory("VFAT{0}".format(vfat)).Get(key.GetName())
                         break
-        elif os.path.isfile(calFileBase + ".txt"):            
+        elif os.path.isfile(calFileBase + ".txt"):
             tuple_calInfo = parseArmDacCalFile(calFileBase + ".txt")
-            for vfat in range(0,24):
+            for vfat in range(0,vfatsPerGemVariant[options.gemType]):
                 dict_func_scurveMeanVsThrDac[vfat] = r.TF1("func_scurveMeanVsThrDac_vfat%d"%(vfat),"[0]*x^4+[1]*x^3+[2]*x^2+[3]*x+[4]")
                 dict_func_scurveMeanVsThrDac[vfat].SetParameter(0,tuple_calInfo[0][vfat])
                 dict_func_scurveMeanVsThrDac[vfat].SetParameter(1,tuple_calInfo[1][vfat])
@@ -96,7 +100,7 @@ if __name__ == '__main__':
     else:
         if options.calFileARM[-4:] == ".txt":
             tuple_calInfo = parseArmDacCalFile(options.calFileARM)
-            for vfat in range(0,24):
+            for vfat in range(0,vfatsPerGemVariant[options.gemType]):
                 dict_func_scurveMeanVsThrDac[vfat] = r.TF1("func_scurveMeanVsThrDac_vfat%d"%(vfat),"[0]*x^4+[1]*x^3+[2]*x^2+[3]*x+[4]")
                 dict_func_scurveMeanVsThrDac[vfat].SetParameter(0,tuple_calInfo[0][vfat])
                 dict_func_scurveMeanVsThrDac[vfat].SetParameter(1,tuple_calInfo[1][vfat])
@@ -105,7 +109,7 @@ if __name__ == '__main__':
                 dict_func_scurveMeanVsThrDac[vfat].SetParameter(4,tuple_calInfo[4][vfat])
         elif options.calFileARM[-5:] == ".root":
             TFile_calInfo = r.TFile(options.calFileARM)
-            for vfat in range(0,24):
+            for vfat in range(0,vfatsPerGemVariant[options.gemType]):
                 for key in TFile_calInfo.GetDirectory("VFAT{0}".format(vfat)).GetListOfKeys():
                     if "func_ScurveMean_vs_CFG_THR_ARM_DAC_" in key.GetName() and "_vfatN{0}_".format(vfat) in key.GetName():
                         dict_func_scurveMeanVsThrDac[vfat] = TFile_calInfo.GetDirectory("VFAT{0}".format(vfat)).Get(key.GetName())
@@ -124,27 +128,27 @@ if __name__ == '__main__':
         runCommand( ['mkdir','-p','%s/%s'%(dirPath,startTime)])
         runCommand( ["ln","-s",'%s/%s'%(dirPath,startTime),'%s/current'%dirPath] )
         dirPath = '%s/%s'%(dirPath,startTime)
-    else: 
+    else:
         dirPath = options.dirPath
         pass
-  
+
     # Declare the hardware board
     from gempython.vfatqc.utils.qcutilities import getCardName
     cardName = getCardName(options.shelf,options.slot)
-    vfatBoard = HwVFAT(cardName, options.gtx, options.debug)
+    vfatBoard = HwVFAT(cardName, options.gtx, options.debug, options.gemType, options.detType)
     print 'opened connection'
-    
+
     if options.vfatConfig is not None:
         try:
             print 'Configuring VFAT Registers based on %s'%options.vfatConfig
             vfatTree = r.TTree('vfatTree','Tree holding VFAT Configuration Parameters')
             vfatTree.ReadFile(options.vfatConfig)
-            
+
             for event in vfatTree :
                 # Skip masked vfats
                 if (options.vfatmask >> int(event.vfatN)) & 0x1:
                     continue
-                    
+
                 # Write CFG_THR_ARM_DAC
                 print('Set link %d VFAT%d CFG_THR_ARM_DAC to %i'%(options.gtx,event.vfatN,event.vt1))
                 vfatBoard.setVFATThreshold(chip=int(event.vfatN), vt1=int(event.vt1))
@@ -153,18 +157,18 @@ if __name__ == '__main__':
             print e
     else:
         vfatBoard.setVFATThresholdAll(mask=options.vfatmask, vt1=options.armDAC)
-        
+
     # Get all chip IDs
     vfatIDvals = vfatBoard.getAllChipIDs(options.vfatmask)
 
     # Get global arm dac value
     vals = vfatBoard.readAllVFATs("CFG_THR_ARM_DAC", options.vfatmask)
-    dict_thrArmDacPerVFAT =  dict(map(lambda slotID: (slotID, vals[slotID]&0xff),range(0,24)))
+    dict_thrArmDacPerVFAT =  dict(map(lambda slotID: (slotID, vals[slotID]&0xff),range(0,vfatsPerGemVariant[options.gemType])))
 
     # Make the cArrays
     cArray_trimVal = (c_uint32 * 3072)()
     cArray_trimPol = (c_uint32 * 3072)()
-    
+
     ###############
     # Take scurves at each trimPoint
     ###############
@@ -214,7 +218,9 @@ if __name__ == '__main__':
                         trimARM = cArray_trimVal,
                         trimARMPol = cArray_trimPol,
                         vfatmask = options.vfatmask,
-                        voltageStepPulse = options.voltageStepPulse)
+                        voltageStepPulse = options.voltageStepPulse,
+                        gemType = args.gemType,
+                        detType = args.detType)
                 print("scurve finished")
         else:
             print("file %s either does not exist, or is a zombie"%filename)
@@ -252,9 +258,9 @@ if __name__ == '__main__':
     chConfig = open("%s/chConfig.txt"%dirPath,"w")
     chConfig.write('vfatN/I:vfatID/I:vfatCH/I:trimDAC/I:trimPolarity/I:mask/I\n')
 
-    # Create the output file which will store the trim data 
+    # Create the output file which will store the trim data
     outFile = r.TFile("%s/TrimData.root"%(dirPath),"RECREATE")
-    
+
     # Setup the output TTree
     thisTime = int(time.time())
     from gempython.vfatqc.utils.treeStructure import gemDacCalTreeStructure
@@ -285,7 +291,7 @@ if __name__ == '__main__':
     print("Determining trimDAC to fC Calibration")
     dict_cal_trimDAC2fC_graph = ndict() # dict_cal_trimDAC2fC[vfat][chan] = TGraphErrors object
     dict_cal_trimDAC2fC_func = ndict() # dict_cal_trimDAC2fC[vfat][chan] = TF1 object
-    for vfat in range(0,24):
+    for vfat in range(0,vfatsPerGemVariant[options.gemType]):
         func_charge_vs_calDac = r.TF1(
                 "func_charge_vs_calDac_vfat%d"%(vfat),
                 "[0]*x+[1]",
@@ -297,7 +303,7 @@ if __name__ == '__main__':
                 func_dacFit=func_charge_vs_calDac,
                 vfatID = vfatIDvals[vfat],
                 vfatN = vfat)
-        
+
         armDacCalTree.fill(
                 func_dacFit=dict_func_scurveMeanVsThrDac[vfat],
                 vfatID = vfatIDvals[vfat],
@@ -315,13 +321,13 @@ if __name__ == '__main__':
             g_TrimDAC_vs_scurveMean.SetMarkerStyle(24)
             g_TrimDAC_vs_scurveMean.SetTitle("VFAT{0} Channel {1};scurve mean #left(fC#right);trimDAC".format(vfat, chan))
 
-            # Declare the fit function 
+            # Declare the fit function
             func_TrimDAC_vs_scurveMean = r.TF1(
                     "func_TrimDAC_vs_scurveMean_vfat%d_chan%d_gblArmDAC%d"%(vfat,chan,dict_thrArmDacPerVFAT[vfat]),
                     "[0]*x+[1]",
                     min(listOfTrimPoints),
                     max(listOfTrimPoints))
-            
+
             numValidChanFits = 0
             for idx,trimPt in enumerate(dict_scurveFitResults.keys()):
                 if trimPt[1] > 0: # negative trimVal
@@ -379,7 +385,7 @@ if __name__ == '__main__':
 
             dict_cal_trimDAC2fC_graph[vfat][chan] = g_TrimDAC_vs_scurveMean
             dict_cal_trimDAC2fC_func[vfat][chan] = func_TrimDAC_vs_scurveMean
-            
+
             # Write Channel Configuration
             chConfig.write('%d\t%d\t%d\t%d\t%d\t%d\n'%(
                     vfat,
@@ -391,7 +397,7 @@ if __name__ == '__main__':
                 )
 
     # Write output
-    for vfat in range(0,24):
+    for vfat in range(0,vfatsPerGemVariant[options.gemType]):
         dirVFAT = outFile.mkdir("VFAT%i"%vfat)
         for chan in range(chMin,chMax):
             dirChan = dirVFAT.mkdir("chan%i"%chan)
