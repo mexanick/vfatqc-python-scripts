@@ -153,7 +153,7 @@ if __name__ == '__main__':
                                     [args.armDACBump           for ohKey in chambers2Configure],
                                     [args.config               for ohKey in chambers2Configure],
                                     [chambers2Configure[ohKey] for ohKey in chambers2Configure.keys()],
-                                    [args.debug                for ohKey in chambers2Configure.keys()]
+                                    [args.debug                for ohKey in chambers2Configure.keys()],
                                     [args.gemType              for ohKey in chambers2Configure.keys()]
                                     )
                                  )
