@@ -5,13 +5,21 @@ import os
 def launch(args):
   return launchArgs(*args)
 
-def launchArgs(shelf,slot,link,run,armDAC,armDACBump,config,cName,debug=False):
+def launchArgs(shelf,slot,link,run,armDAC,armDACBump,config,cName,debug=False, gemType="ge11"):
     dataPath = os.getenv('DATA_PATH')
 
     from gempython.vfatqc.utils.qcutilities import getCardName
     from gempython.tools.vfat_user_functions_xhal import HwVFAT
     cardName = getCardName(shelf,slot)
-    vfatBoard = HwVFAT(cardName, link, debug)
+    if gemType == "ge11":
+        detType = "short"
+    elif gemType == "ge21":
+        detType = "m1"
+    else:
+        print("GEM types other than GE1/1 and GE2/1 aren't supported yet")
+        os.exit(1)
+
+    vfatBoard = HwVFAT(cardName, link, debug, gemType, detType)
 
     from gempython.vfatqc.utils.namespace import Namespace
     args = Namespace(
@@ -37,7 +45,7 @@ def launchArgs(shelf,slot,link,run,armDAC,armDACBump,config,cName,debug=False):
             args.chConfig = chConfig
         else:
             print("No channel configuration exists for {0}".format(cName))
-        
+
         # VFAT Config
         if os.path.isfile(vfatConfig):
             args.vfatConfig = vfatConfig
@@ -71,6 +79,7 @@ if __name__ == '__main__':
     parser.add_argument("--run", action="store_true",help="Set VFATs to run mode")
     parser.add_argument("--series", action="store_true",help="Run tests in series (default is false)")
     parser.add_argument("--shelf", type=int,help="uTCA shelf number",default=1)
+    parser.add_argument("--gemType",type=str,help="String that defines the GEM variant, available from the list: {0}".format(gemVariants.keys()),default="ge11")
     args = parser.parse_args()
 
     from gempython.utils.wrappers import envCheck
@@ -84,7 +93,7 @@ if __name__ == '__main__':
             chambers2Configure[ohKey] = cName
             pass
         pass
-    
+
     from gempython.utils.gemlogger import printRed
     if (len(chambers2Configure) == 0):
         printRed("No chambers for shelf{0} exist".format(args.shelf))
@@ -119,7 +128,8 @@ if __name__ == '__main__':
                     args.armDACBump,
                     args.config,
                     chamber,
-                    args.debug
+                    args.debug,
+                    args.gemType
                     )
             pass
         pass
@@ -130,7 +140,7 @@ if __name__ == '__main__':
         # from: https://stackoverflow.com/questions/11312525/catch-ctrlc-sigint-and-exit-multiprocesses-gracefully-in-python
         original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
         pool = Pool(12)
-        
+
         signal.signal(signal.SIGINT, original_sigint_handler)
         try:
             res = pool.map_async(launch,
@@ -144,6 +154,7 @@ if __name__ == '__main__':
                                     [args.config               for ohKey in chambers2Configure],
                                     [chambers2Configure[ohKey] for ohKey in chambers2Configure.keys()],
                                     [args.debug                for ohKey in chambers2Configure.keys()]
+                                    [args.gemType              for ohKey in chambers2Configure.keys()]
                                     )
                                  )
 

@@ -9,18 +9,20 @@ if __name__ == '__main__':
     parser.add_argument("-d","--debug",action="store_true",help="Prints additional information")
     parser.add_argument("--write2File",action="store_true",help="If Provided data will be written to appropriate calibration files")
     parser.add_argument("--write2CTP7",action="store_true",help="If Provided IREF data will be sent to the VFAT3 config files on the CTP7")
+    parser.add_argument("--gemType",type=str,help="String that defines the GEM variant, available from the list: {0}".format(gemVariants.keys()),default="ge11")
+    parser.add_argument("--detType",type=str,help="Detector type within gemType. If gemType is 'ge11' then this should be from list {0}; if gemType is 'ge21' then this should be from list {1}; and if type is 'me0' then this should be from the list {2}".format(gemVariants['ge11'],gemVariants['ge21'],gemVariants['me0']),default=None)
     args = parser.parse_args()
 
     from gempython.tools.vfat_user_functions_xhal import *
-    
+
     from gempython.vfatqc.utils.qcutilities import getCardName
     cardName = getCardName(args.shelf,args.slot)
-    vfatBoard = HwVFAT(cardName,args.link)
+    vfatBoard = HwVFAT(cardName, link=args.link, gemType=args.gemType, detType=args.detType)
 
     mask = vfatBoard.parentOH.getVFATMask()
     chipIDs = vfatBoard.getAllChipIDs(mask)
 
-    while(len(chipIDs) != 24):
+    while(len(chipIDs) < vfatBoard.parentOH.nVFATs):
         chipIDs.append(0)
 
     if args.debug:
@@ -38,7 +40,7 @@ if __name__ == '__main__':
     if args.write2File or args.write2CTP7:
         from gempython.gemplotting.utils.anautilities import getDataPath, getElogPath
         ohKey = (args.shelf, args.slot, args.link)
-        
+
         from gempython.gemplotting.mapping.chamberInfo import chamber_config
         if ohKey in chamber_config:
             cName = chamber_config[ohKey]
@@ -92,7 +94,7 @@ if __name__ == '__main__':
         runCommand(["chmod", "g+rw", filename_caldac])
         pass
 
-    # Write CFG_IREF to VFAT3 Config Files On CTP7?    
+    # Write CFG_IREF to VFAT3 Config Files On CTP7?
     if args.write2CTP7:
         import os
         filename_iref = "{0}/NominalValues-CFG_IREF.txt".format(outDir)
@@ -114,7 +116,7 @@ if __name__ == '__main__':
         import logging
         gemlogger = getGEMLogger(__name__)
         gemlogger.setLevel(logging.INFO)
-    
+
         from gempython.vfatqc.utils.confUtils import updateVFAT3ConfFilesOnAMC
         updateVFAT3ConfFilesOnAMC(cardName,args.link,filename_iref,"CFG_IREF")
         pass
