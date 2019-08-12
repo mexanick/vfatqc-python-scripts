@@ -22,7 +22,7 @@ if __name__ == '__main__':
                       help="Specify MSPL. Must be in the range 0-7 (default is 3)", metavar="MSPL")
     parser.add_option("--pulseDelay", type="int", dest = "pDel", default = 40,
                       help="Specify time of pulse before L1A in bx", metavar="pDel")
-    parser.add_option("--rates", type="string", dest = "rates", default = "1e3,1e4,1e5,1e6,1e7",
+    parser.add_option("--rates", type="string", dest = "rates", default = "1e3,1e4,1e5,1e6",
                       help="Comma separated list of floats that specifies the pulse rates to be considered",
                       metavar="rates")
     parser.add_option("--time", type="int", dest="time", default = 1,
@@ -163,7 +163,7 @@ if __name__ == '__main__':
                 outDataFPGARate=scanDataFPGARate,
                 outDataVFATRate=scanDataVFATRate,
                 pulseDelay=options.pDel,
-                pulseRate=0,
+                pulseRate=1,
                 vfat=vfat,
                 waitTime=options.time
                 )
