@@ -26,7 +26,6 @@ VFATQC_VER_MINOR=4
 VFATQC_VER_PATCH=3
 
 include $(BUILD_HOME)/$(Project)/config/mfCommonDefs.mk
-include $(BUILD_HOME)/$(Project)/config/mfPythonDefs.mk
 
 # include $(BUILD_HOME)/$(Project)/config/mfDefs.mk
 
