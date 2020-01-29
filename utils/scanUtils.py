@@ -332,6 +332,9 @@ def launchSCurve(**kwargs):
     else:
         cmd.append("--calSF=%i"%(calSF) )
 
+    if debug:
+        cmd.append("--debug")
+        
     # launch the command
     if debug:
         print("launching an scurve with command:")
@@ -453,7 +456,7 @@ def sbitRateScanAllLinks(args, rateTree, vfatBoard, chan=128, scanReg="CFG_THR_A
 
     # Make the containers
     nDACValues = (args.scanmax-args.scanmin+1)/args.stepSize
-    arraySize = amcBoard.nOHs * nDACValues
+    arraySize = 12 * nDACValues
     scanDataDAC = (c_uint32 * arraySize)()
     scanDataRate = (c_uint32 * arraySize)()
     scanDataRatePerVFAT = (c_uint32 * (24 * arraySize))() # per VFAT
